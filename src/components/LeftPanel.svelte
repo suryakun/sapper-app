@@ -1,33 +1,30 @@
 <script>
-    import { user } from '../stores/user.store.js'
-    import { onDestroy, onMount, beforeUpdate } from "svelte";
+    import Swal from 'sweetalert2'
+    import { user, profile } from '../stores/user.store.js'
+    import { showLoading, hideLoading } from '../stores/app.store.js'
+    import { onMount } from "svelte";
     import { ErrorModal } from "../helpers/alert"
-    let fileForm
-    let files
-    let email = ''
-    let profileImate = 'img/profile.svg'
-    let userProfile
 
-    // onDestroy(unsubscribeUser)
+    let name = ''
+    let profileImate = 'img/profile.svg'
+
+    async function initialize(userData) {
+        if (userData) {
+            const db = firebase.firestore()
+            const query = await db.collection(`users`).where("userId", "==", userData.uid).get()
+            if (!query.empty) {
+                const snapshot = query.docs[0]
+                const profileData = snapshot.data()
+                name = userData.email
+                profileImate = profileData.imageUrl
+                profile.update(data => ({...userData, imageUrl: profileImate}))
+            }
+        } 
+    }
 
     onMount(() => {
-        user.subscribe(async user => {
-            if (user) {
-                const db = firebase.firestore()
-                const query = await db.collection(`users`).where("userId", "==", user.uid).get()
-                if (!query.empty) {
-                    const snapshot = query.docs[0]
-                    const profile = snapshot.data()
-                    email = user.email
-                    profileImate = profile.imageUrl
-                }
-            } 
-        })
+        user.subscribe(initialize)
     })
-
-    function openFile() {
-        fileForm.click()
-    }
 
     async function saveProfile(location) {
         try {
@@ -37,23 +34,23 @@
                 userId: uid,
                 imageUrl: location
             })
-            console.log(doc)
         } catch (error) {
           ErrorModal(err.code)
         }
     }
 
-    async function fileChanged() {
+    async function fileChanged(file) {
         try {
-            if(!fileForm.files.length) {
+            showLoading()
+            if(!file) {
                 throw new Error('storage/no-profile-pic')
             }
             const uid = firebase.auth().currentUser.uid
-            const file = fileForm.files[0]
-            const image = await firebase.storage().ref(`/users/${uid}/profile/${file.name}`).put(fileForm.files[0])
+            const image = await firebase.storage().ref(`/users/${uid}/profile/${file.name}`).put(file)
             const location = await firebase.storage().ref(image.metadata.fullPath).getDownloadURL()
             saveProfile(location)
             profileImate = location
+            hideLoading()
         } catch (error) {
             console.log(err)
             ErrorModal(err.code)
@@ -64,7 +61,31 @@
 		return firebase.auth().signOut().then(() => {
 			goto('/login')
 		})
-	}
+    }
+    
+    async function openFileModal() {
+        const { value: file } = await Swal.fire({
+            title: 'Perbaharui photo',
+            input: 'file',
+            inputAttributes: {
+                'accept': 'image/*',
+                'aria-label': 'Pilih photo profile anda'
+            }
+        })
+
+        if (file) {
+            const reader = new FileReader()
+            reader.onload = (e) => {
+                Swal.fire({
+                title: 'Photo profile anda',
+                imageUrl: e.target.result,
+                imageAlt: 'The uploaded picture'
+                })
+            }
+            reader.readAsDataURL(file)
+            fileChanged(file)
+        } 
+    }
 </script>
 <!-- left links -->
 <div class="col-md-3">
@@ -75,16 +96,15 @@
             <!-- svelte-ignore a11y-missing-attribute -->
             <a>
                 <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image" src={profileImate} />
-                <input type="file" style="display:none" bind:this={fileForm} bind:value={files} on:change={fileChanged} accept="image/*"/>
+                <img alt="image" src={profileImate} on:click={openFileModal}/>
             </a>
-            <p/><h6 style="border: 1px solid grey; padding: 8px; cursor: pointer; border-radius: 10px;" on:click={openFile}>Perbaharui Photo</h6>
-            <h1>{email}</h1>
+            <h1>{name}</h1>
             <!-- <p>@username</p> -->
         </div>
 
         <ul class="nav nav-pills nav-stacked">
-            <li class="active"><a href="/pos"> <i class="fa fa-user"></i> News feed</a></li>
+            <li><a href="test"> <i class="fa fa-image"></i> Photos</a></li>
+            <!-- <li class="active"><a href="/pos"> <i class="fa fa-user"></i> Perbaharui photo profile </a></li> -->
             <!-- svelte-ignore a11y-missing-attribute -->
             <li on:click={logout}><a> <i class="fa fa-sign-out"></i> Keluar</a></li>
             <!-- <li>

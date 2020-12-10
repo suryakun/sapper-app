@@ -10,8 +10,18 @@ export default class AuthMiddleware {
         if (routes[to] && routes[to].authenticated) {
             firebase.auth().onAuthStateChanged((profile) => {
                 if (profile) {
+                    const userProfile = (({displayName, email, imageUrl, phoneNumber, photoUrl, uid}) => {
+                        return {
+                            displayName: displayName || '',
+                            email: email || '',
+                            imageUrl: imageUrl || '',
+                            phoneNumber: phoneNumber || '',
+                            photoUrl: photoUrl || '',
+                            uid: uid || '',
+                        }
+                    })(profile)
                     console.log(profile)
-                    user.update(u => profile)
+                    user.update(u => userProfile)
                     loading.update(load => false)
                 } else {
                     redirect("/login")

@@ -1,3 +1,28 @@
+<script>
+    import { onMount } from "svelte";
+    import StoryInput from "./StoryInput.svelte";
+    import { stories, addStory } from '../stores/story.store.js'
+    import { ErrorModal } from "../helpers/alert";
+
+    let localStories = []
+
+    onMount(async () => {
+        try {
+            const db = firebase.firestore()
+            const query = await db.collection(`story`).get()
+            query.forEach(story => {
+                addStory(story.data())
+            });
+            stories.subscribe(data => {
+                localStories = data
+            })
+            console.log(localStories)
+        } catch (error) {
+            console.log(error)
+            ErrorModal(error.code)
+        }
+    })
+</script>
 <!-- center posts -->
 <div class="col-md-6">
     <div class="row">
@@ -5,79 +30,74 @@
     <div class="col-md-12">
         <div class="row">
         <div class="col-md-12">
-        <!-- post state form -->
-            <div class="box profile-info n-border-top">
-            <form>
-                <textarea class="form-control input-lg p-text-area" rows="2" placeholder="Whats in your mind today?"></textarea>
-            </form>
-            <div class="box-footer box-form">
-                <button type="button" class="btn btn-azure pull-right">Post</button>
-                <ul class="nav nav-pills">
-                    <!-- svelte-ignore a11y-missing-attribute -->
-                    <!-- <li><a><i class="fa fa-map-marker"></i></a></li> -->
-                    <li><a href="test"><i class="fa fa-camera"></i></a></li>
-                    <!-- <li><a href="test"><i class=" fa fa-film"></i></a></li> -->
-                    <!-- <li><a href="test"><i class="fa fa-microphone"></i></a></li> -->
-                </ul>
-            </div>
-            </div><!-- end post state form -->
-
-            <!--   posts -->
-            <div class="box box-widget">
-            <div class="box-header with-border">
-                <div class="user-block">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image"class="img-circle" src="img/Friends/guy-3.jpg" />
-                <span class="username"><a href="test">John Breakgrow jr.</a></span>
-                <span class="description">Shared publicly - 7:30 PM Today</span>
-                </div>
-            </div>
-
-            <div class="box-body" style="display: block;">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image"class="img-responsive show-in-modal" src="img/Post/young-couple-in-love.jpg" />
-                <p>I took this photo this morning. What do you guys think?</p>
-                <button type="button" class="btn btn-default btn-xs"><i class="fa fa-share"></i> Share</button>
-                <button type="button" class="btn btn-default btn-xs"><i class="fa fa-thumbs-o-up"></i> Like</button>
-                <span class="pull-right text-muted">127 likes - 3 comments</span>
-            </div>
-            <div class="box-footer box-comments" style="display: block;">
-                <div class="box-comment">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image"class="img-circle img-sm" src="img/Friends/guy-2.jpg" />
-                <div class="comment-text">
-                    <span class="username">
-                    Maria Gonzales
-                    <span class="text-muted pull-right">8:03 PM Today</span>
-                    </span>
-                    It is a long established fact that a reader will be distracted
-                    by the readable content of a page when looking at its layout.
-                </div>
+            <StoryInput />
+            {#each localStories as item}
+                <!--   posts -->
+                <div class="box box-widget">
+                <div class="box-header with-border">
+                    <div class="user-block">
+                    {#if item.imageUrl !== ""}
+                        <!-- svelte-ignore a11y-img-redundant-alt -->
+                        <img alt="image"class="img-circle" src={item.imageUrl} />
+                    {:else}
+                        <!-- svelte-ignore a11y-img-redundant-alt -->
+                        <img alt="image"class="img-circle" src="img/profile.svg" />
+                    {/if}
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <span class="username"><a href="test">John Breakgrow jr.</a></span>
+                    <span class="description">Shared publicly - 7:30 PM Today</span>
+                    </div>
                 </div>
 
-                <div class="box-comment">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image"class="img-circle img-sm" src="img/Friends/guy-3.jpg" />
-                <div class="comment-text">
-                    <span class="username">
-                    Luna Stark
-                    <span class="text-muted pull-right">8:03 PM Today</span>
-                    </span>
-                    It is a long established fact that a reader will be distracted
-                    by the readable content of a page when looking at its layout.
+                <div class="box-body" style="display: block;">
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image"class="img-responsive show-in-modal" src="img/Post/young-couple-in-love.jpg" />
+                    <p>I took this photo this morning. What do you guys think?</p>
+                    <button type="button" class="btn btn-default btn-xs"><i class="fa fa-share"></i> Share</button>
+                    <button type="button" class="btn btn-default btn-xs"><i class="fa fa-thumbs-o-up"></i> Like</button>
+                    <span class="pull-right text-muted">127 likes - 3 comments</span>
+                </div>
+                <div class="box-footer box-comments" style="display: block;">
+                    <div class="box-comment">
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image"class="img-circle img-sm" src="img/Friends/guy-2.jpg" />
+                    <div class="comment-text">
+                        <span class="username">
+                        Maria Gonzales
+                        <span class="text-muted pull-right">8:03 PM Today</span>
+                        </span>
+                        It is a long established fact that a reader will be distracted
+                        by the readable content of a page when looking at its layout.
+                    </div>
+                    </div>
+
+                    <div class="box-comment">
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image"class="img-circle img-sm" src="img/Friends/guy-3.jpg" />
+                    <div class="comment-text">
+                        <span class="username">
+                        Luna Stark
+                        <span class="text-muted pull-right">8:03 PM Today</span>
+                        </span>
+                        It is a long established fact that a reader will be distracted
+                        by the readable content of a page when looking at its layout.
+                    </div>
+                    </div>
+                </div>
+                <div class="box-footer" style="display: block;">
+                    <form action="#" method="post">
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image"class="img-responsive img-circle img-sm" src="img/Friends/guy-3.jpg" />
+                    <div class="img-push">
+                        <input type="text" class="form-control input-sm" placeholder="Press enter to post comment">
+                    </div>
+                    </form>
                 </div>
                 </div>
-            </div>
-            <div class="box-footer" style="display: block;">
-                <form action="#" method="post">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image"class="img-responsive img-circle img-sm" src="img/Friends/guy-3.jpg" />
-                <div class="img-push">
-                    <input type="text" class="form-control input-sm" placeholder="Press enter to post comment">
-                </div>
-                </form>
-            </div>
-            </div><!--  end posts-->
+                <!--  end posts-->
+            {/each}
+
+
 
 
             <!-- post -->
