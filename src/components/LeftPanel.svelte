@@ -5,36 +5,21 @@
     import { onMount } from "svelte";
     import { ErrorModal } from "../helpers/alert"
 
-    let name = ''
-    let profileImate = 'img/profile.svg'
-
-    async function initialize(userData) {
-        if (userData) {
-            const db = firebase.firestore()
-            const query = await db.collection(`users`).where("userId", "==", userData.uid).get()
-            if (!query.empty) {
-                const snapshot = query.docs[0]
-                const profileData = snapshot.data()
-                name = userData.email
-                profileImate = profileData.imageUrl
-                profile.update(data => ({...userData, imageUrl: profileImate}))
-            }
-        } 
-    }
+    let profileImate 
 
     onMount(() => {
-        user.subscribe(initialize)
+        user.subscribe((u) => {
+            profileImate = u && u.photoURL
+        })
     })
-
     async function saveProfile(location) {
         try {
-            const uid = firebase.auth().currentUser.uid
-            const db = firebase.firestore()
-            const doc = await db.collection("users").doc(`profile-${uid}`).set({
-                userId: uid,
-                imageUrl: location
+            console.log(location)
+            const currentUser = firebase.auth().currentUser
+            await currentUser.updateProfile({
+                photoURL: location
             })
-        } catch (error) {
+        } catch (err) {
           ErrorModal(err.code)
         }
     }
@@ -95,18 +80,24 @@
         <div class="user-heading round">
             <!-- svelte-ignore a11y-missing-attribute -->
             <a>
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <img alt="image" src={profileImate} on:click={openFileModal}/>
+                {#if profileImate}
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image" src={profileImate} on:click={openFileModal}/>
+                {:else}
+                    <!-- svelte-ignore a11y-img-redundant-alt -->
+                    <img alt="image" src="img/profile.svg" on:click={openFileModal}/>
+                {/if}
             </a>
-            <h1>{name}</h1>
+            <h1>{$user && $user.displayName}</h1>
             <!-- <p>@username</p> -->
         </div>
 
         <ul class="nav nav-pills nav-stacked">
+            <li><a href="test"> <i class="fa fa-user"></i> Profile</a></li>
             <li><a href="test"> <i class="fa fa-image"></i> Photos</a></li>
             <!-- <li class="active"><a href="/pos"> <i class="fa fa-user"></i> Perbaharui photo profile </a></li> -->
             <!-- svelte-ignore a11y-missing-attribute -->
-            <li on:click={logout}><a> <i class="fa fa-sign-out"></i> Keluar</a></li>
+            <li on:click={logout}><a> <i class="fa fa-exit"></i> Keluar</a></li>
             <!-- <li>
             <a href="test"> 
                 <i class="fa fa-envelope"></i> Messages 

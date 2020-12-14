@@ -1,8 +1,9 @@
 <script>
   import { goto } from '@sapper/app'
   import { ErrorModal } from "../helpers/alert"
+  import { user } from '../stores/user.store';
 
-  let name = ''
+  let displayName = ''
   let email = ''
   let password = ''
   let confpassword = ''
@@ -14,12 +15,14 @@
        ErrorModal("auth/wrong-password")
        return
       }
-      console.log("hhh")
       await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION)
       await firebase.auth().createUserWithEmailAndPassword(email, password)
+      const currentUser = firebase.auth().currentUser
+      await currentUser.updateProfile({ displayName })
+      user.update(u => ({ displayName, email }))
       goto("/pos")
-      console.log("donw")
     } catch (err) {
+      console.log(err)
       ErrorModal(err.code)
     }
   }
@@ -34,7 +37,7 @@
     {/if}
     <form on:submit|preventDefault={register}>
       <div class="form-group">
-        <input bind:value={name} type="text" class="form-control" placeholder="Nama lengkap" />
+        <input bind:value={displayName} type="text" class="form-control" placeholder="Nama lengkap" />
       </div>
       <div class="form-group">
         <input bind:value={email} type="email" class="form-control" placeholder="Alamat Email" />

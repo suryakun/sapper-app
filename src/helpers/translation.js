@@ -89,7 +89,8 @@ const translation = {
     "auth/phone-number-already-exists": "Ponsel yang disediakan sudah digunakan",
     "auth/project-not-found": "Tidak ada proyek yang ditemukan",
     "auth/insufficient-permission": "Kredensial yang digunakan tidak memiliki akses ke sumber daya yang diminta",
-    "auth/internal-error": "Server otentikasi mengalami kesalahan tak terduga saat mencoba memproses permintaan"
+    "auth/internal-error": "Server otentikasi mengalami kesalahan tak terduga saat mencoba memproses permintaan",
+    "storage/unauthorized": "Anda tidak memiliki akses untuk operasi tersebut"
 }
 
 export default translation

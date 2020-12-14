@@ -1,28 +1,37 @@
 <script>
-    import { onMount } from "svelte";
-    import { profile } from '../stores/user.store.js'
+    import Swal from 'sweetalert2'
+    import { onDestroy, onMount } from "svelte";
+    import { user } from '../stores/user.store.js'
     import { showLoading, hideLoading } from '../stores/app.store.js'
     import { ErrorModal } from "../helpers/alert"
 
     let localUser
-    let textStory
+    let textStory = ''
 
     onMount(() => {
-        profile.subscribe(user => {
-            localUser = user
+        user.subscribe(u => {
+            localUser = u
+            console.log(localUser)
         })
     })
 
-    async function submitPost() {
+    async function submitPost(e, file) {
         try {
             showLoading()
             if(!textStory.length || !localUser) return
-            const db = firebase.firestore()
-            await db.collection("story").doc().set({
+            console.log(localUser)
+            const payload = {
                 ...localUser,
                 content: textStory,
                 timestamp: Date.now()
-            })
+            }
+            if (file) {
+                payload.images = [
+                    file
+                ]
+            }
+            const db = firebase.firestore()
+            await db.collection("story").doc().set(payload)
             textStory = null
             hideLoading()
         } catch (error) {
@@ -30,6 +39,60 @@
             ErrorModal("GENERAL_ERROR")
             hideLoading()
         }
+    }
+
+    async function fileChanged(file, text) {
+        try {
+            showLoading()
+            if(!file) {
+                throw new Error('storage/no-profile-pic')
+            }
+            const image = firebase.storage().ref(`/stories/${Date.now() + file.name}`).put(file)
+            image.on('state_changed', 
+                function progress(snapshot) {
+                    var percentage = snapshot.bytesTransferred / snapshot.totalBytes * 100;
+                    console.log(percentage)
+                },
+                function error(err) {
+                    console.log(err)
+                },
+                async function complete() {
+                    const url = await image.snapshot.ref.getDownloadURL()
+                    submitPost(null, url)
+                }
+            )
+            hideLoading()
+        } catch (error) {
+            console.log(error)
+            ErrorModal(error.code)
+        }
+    }
+
+    async function openFileModal() {
+        const { value: file } = await Swal.fire({
+            title: 'Tambahkan gambar',
+            input: 'file',
+            inputAttributes: {
+                'accept': 'image/*',
+                'aria-label': 'Pilih photo profile anda'
+            }
+        })
+
+        if (file) {
+            const reader = new FileReader()
+            reader.onload = async (e) => {
+                const { value: text} = await Swal.fire({
+                    imageUrl: e.target.result,
+                    imageAlt: 'The uploaded picture',
+                    input: 'textarea',
+                    inputValue: textStory, 
+                    inputPlaceholder: 'Apa yang anda pikirkan?'
+                })
+                textStory = text
+                fileChanged(file, text)
+            }
+            reader.readAsDataURL(file)
+        } 
     }
 </script>
 
@@ -43,7 +106,7 @@
         <ul class="nav nav-pills">
             <!-- svelte-ignore a11y-missing-attribute -->
             <!-- <li><a><i class="fa fa-map-marker"></i></a></li> -->
-            <li><a href="test"><i class="fa fa-camera"></i></a></li>
+            <li on:click={openFileModal}><a><i class="fa fa-camera"></i></a></li>
             <!-- <li><a href="test"><i class=" fa fa-film"></i></a></li> -->
             <!-- <li><a href="test"><i class="fa fa-microphone"></i></a></li> -->
         </ul>
