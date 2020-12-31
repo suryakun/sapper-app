@@ -17,10 +17,6 @@
       <div class="row">
         <LeftPanel />
         <CenterPanel />
-        
-
-
-
 
         <!-- right posts -->
         <div class="col-md-3">
