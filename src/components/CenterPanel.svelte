@@ -1,26 +1,91 @@
 <script>
   import { onMount, onDestroy } from "svelte";
   import StoryInput from "./StoryInput.svelte";
-  import { stories, addStory, putStory } from "../stores/story.store.js";
+  import Post from './Post.svelte'
+  import { stories, mergeStory, putStory, mergeComment, resetStory } from "../stores/story.store.js";
   import { ErrorModal } from "../helpers/alert";
-  import moment from "moment";
 
   let localStories = [];
-  let unsubscribe
+  let listeners = []
+  let start
+  let end
+  const limit = 5
+
+  function getStories(params) {
+    const db = firebase.firestore();
+    const ref = db.collection('story')
+    ref.orderBy('timestamp', 'desc')
+      .limit(limit)
+      .get()
+      .then(snapshot => {
+        start = snapshot.docs[snapshot.docs.length - 1]
+        if (!start) {
+          return
+        }
+        const listener = ref.orderBy('timestamp')
+          .startAt(start)
+          .onSnapshot(snapshot => {
+            snapshot.docChanges().forEach(change => {
+              switch (change.type) {
+                case "added":
+                  putStory({...change.doc.data(), id: change.doc.id})
+                  break;
+                case "modified":
+                  console.log(change.doc.data())
+                  mergeComment({...change.doc.data(), id: change.doc.id})
+                default:
+                  break;
+              }
+            });
+          })
+        listeners.push(listener)
+      })
+  }
+
+  function getMoreStories(params) {
+    if (!start) {
+      return
+    }
+    const db = firebase.firestore();
+    const ref = db.collection('story')
+    ref.orderBy('timestamp', 'desc')
+      .startAt(start)
+      .limit(limit)
+      .get()
+      .then(snapshot => {
+        let collection = []
+        end = start
+        start = snapshot.docs[snapshot.docs.length - 1]
+        const listener = ref.orderBy('timestamp')
+          .startAt(start)
+          .endBefore(end)
+          .onSnapshot(stories => {
+            stories.forEach(story => {
+              collection.push({...story.data(), id: story.id})
+            })
+            collection.reverse()
+            mergeStory(collection)
+            collection = []
+          })
+        listeners.push(listener)
+      })
+  }
 
   onMount(async () => {
     try {
+      resetStory()
       stories.subscribe((data) => {
         localStories = data;
       });
 
-      const db = firebase.firestore();
-      unsubscribe = db.collection('story').orderBy('timestamp', 'asc')
-          .onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-              putStory(change.doc.data())
-            })
-          })
+      getStories()
+
+      window.addEventListener("scroll", function() {
+        const {scrollHeight,scrollTop,clientHeight} = document.documentElement;
+        if(scrollTop + clientHeight > scrollHeight - 5){
+          getMoreStories()
+        }
+      });
     } catch (error) {
       console.log(error);
       ErrorModal(error.code);
@@ -28,13 +93,15 @@
   });
 
   onDestroy(() => {
-      unsubscribe && unsubscribe()
+    listeners.forEach(listener => {
+      listener()
+    });
   })
 
 </script>
 
 <!-- center posts -->
-<div class="col-md-6">
+<div class="col-md-6 post-container">
   <div class="row">
     <!-- left posts-->
     <div class="col-md-12">
@@ -43,95 +110,7 @@
           <StoryInput />
           {#each localStories as item}
             <!--   posts -->
-            <div class="box box-widget">
-              <div class="box-header with-border">
-                <div class="user-block">
-                  {#if item.photoURL !== ''}
-                    <!-- svelte-ignore a11y-img-redundant-alt -->
-                    <img alt="image" class="img-circle" src={item.photoURL} />
-                  {:else}
-                    <!-- svelte-ignore a11y-img-redundant-alt -->
-                    <img alt="image" class="img-circle" src="img/profile.svg" />
-                  {/if}
-                  <!-- svelte-ignore a11y-img-redundant-alt -->
-                  <span class="username"><a
-                      href="test">{item.displayName || item.email}</a></span>
-                  <span
-                    class="description">{moment(item.timestamp).fromNow()}</span>
-                </div>
-              </div>
-
-              <div class="box-body" style="display: block;">
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                {#if item.images && item.images.length}
-                  {#each item.images as image}
-                    <img
-                      alt="image"
-                      class="img-responsive show-in-modal"
-                      src={image} />
-                  {/each}
-                {/if}
-                <!-- svelte-ignore a11y-img-redundant-alt -->
-                <p>{item.content}</p>
-                <button type="button" class="btn btn-default btn-xs"><i
-                    class="fa fa-share" />
-                  Share</button>
-                <button type="button" class="btn btn-default btn-xs"><i
-                    class="fa fa-thumbs-o-up" />
-                  Like</button>
-                <span class="pull-right text-muted">127 likes - 3 comments</span>
-              </div>
-              <div class="box-footer box-comments" style="display: block;">
-                <div class="box-comment">
-                  <!-- svelte-ignore a11y-img-redundant-alt -->
-                  <img
-                    alt="image"
-                    class="img-circle img-sm"
-                    src="img/Friends/guy-2.jpg" />
-                  <div class="comment-text">
-                    <span class="username">
-                      Maria Gonzales
-                      <span class="text-muted pull-right">8:03 PM Today</span>
-                    </span>
-                    It is a long established fact that a reader will be
-                    distracted by the readable content of a page when looking at
-                    its layout.
-                  </div>
-                </div>
-
-                <div class="box-comment">
-                  <!-- svelte-ignore a11y-img-redundant-alt -->
-                  <img
-                    alt="image"
-                    class="img-circle img-sm"
-                    src="img/Friends/guy-3.jpg" />
-                  <div class="comment-text">
-                    <span class="username">
-                      Luna Stark
-                      <span class="text-muted pull-right">8:03 PM Today</span>
-                    </span>
-                    It is a long established fact that a reader will be
-                    distracted by the readable content of a page when looking at
-                    its layout.
-                  </div>
-                </div>
-              </div>
-              <div class="box-footer" style="display: block;">
-                <form action="#" method="post">
-                  <!-- svelte-ignore a11y-img-redundant-alt -->
-                  <img
-                    alt="image"
-                    class="img-responsive img-circle img-sm"
-                    src="img/Friends/guy-3.jpg" />
-                  <div class="img-push">
-                    <input
-                      type="text"
-                      class="form-control input-sm"
-                      placeholder="Press enter to post comment" />
-                  </div>
-                </form>
-              </div>
-            </div>
+            <Post item={item} />
             <!--  end posts-->
           {/each}
         </div>

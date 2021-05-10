@@ -5,6 +5,7 @@ export default class AuthMiddleware {
     static async beforeChange(from, to, redirect, params, query) {
         const routes = {
             "/pos": { authenticated: true },
+            "/profile": { authenticated: true },
             "/about": { authenticated: true },
         }
         if (routes[to] && routes[to].authenticated) {

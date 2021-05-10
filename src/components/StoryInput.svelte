@@ -11,7 +11,6 @@
     onMount(() => {
         user.subscribe(u => {
             localUser = u
-            console.log(localUser)
         })
     })
 
@@ -19,21 +18,43 @@
         try {
             showLoading()
             if(!textStory.length || !localUser) return
-            console.log(localUser)
             const payload = {
                 ...localUser,
                 content: textStory,
-                timestamp: Date.now()
+                comments: [],
+                timestamp: firebase.firestore.Timestamp.now()
             }
-            if (file) {
-                payload.images = [
-                    file
-                ]
-            }
-            const db = firebase.firestore()
-            await db.collection("story").doc().set(payload)
-            textStory = null
-            hideLoading()
+            setTimeout(async () => {
+                if (file) {
+                    // for 200px
+                    const url200 = `${file.split('.').slice(0, -1).join('.')}_200x200.png`
+                    const filename200 = url200.substring(url200.lastIndexOf('/')+1);
+                    const smallRef = firebase.storage().ref().child(decodeURIComponent(filename200))
+                    const small = await smallRef.getDownloadURL()
+
+                    // for 500px
+                    const url500 = `${file.split('.').slice(0, -1).join('.')}_500x500.png`
+                    const filename500 = url500.substring(url500.lastIndexOf('/')+1);
+                    const thumbRef = firebase.storage().ref().child(decodeURIComponent(filename500))
+                    const thumb = await thumbRef.getDownloadURL()
+                    payload.images = [
+                        {
+                            original: file,
+                            small,
+                            thumb
+                        }
+                    ]
+                }
+                const db = firebase.firestore()
+                const storyRef = await db.collection("story").add(payload)
+                textStory = null
+                const notif = {
+                    ...payload,
+                    id: storyRef.id,
+                }
+                await db.collection("notification").add(notif)
+                hideLoading()
+            }, 2000);
         } catch (error) {
             console.log(error)
             ErrorModal("GENERAL_ERROR")

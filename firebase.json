@@ -20,5 +20,12 @@
   },
   "storage": {
     "rules": "storage.rules"
-  }
+  },
+  "headers": [ {
+    "source" : "**/*.@(jpg|jpeg|gif|png|webp)",
+    "headers" : [ {
+      "key" : "Access-Control-Allow-Origin",
+      "value" : "*"
+    } ]
+  } ]
 }

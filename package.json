@@ -16,6 +16,7 @@
     "momentjs": "^2.0.0",
     "polka": "next",
     "sirv": "^1.0.0",
+    "svelte-loadable": "^1.5.1",
     "sweetalert2": "^10.10.1",
     "translate": "^1.1.2"
   },
@@ -23,6 +24,7 @@
     "sapper": "^0.28.0",
     "svelte": "^3.17.3",
     "svelte-image-gallery": "^1.3.0",
+    "svelte-intersection-observer": "^0.4.0",
     "svelte-loader": "^2.9.0",
     "webpack": "^4.7.0",
     "webpack-modules": "^1.0.0"
